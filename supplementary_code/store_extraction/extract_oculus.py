@@ -18,7 +18,7 @@ def modify(text):
     text = text.encode('ascii', errors='ignore').strip().decode('ascii')
 
     return text
-    
+
 # quickly scroll down to bottom of the page
 def quick_scroll_to_bottom(driver):
 
@@ -40,14 +40,14 @@ def quick_scroll_to_bottom(driver):
             new_height = driver.execute_script(js)
 
     time.sleep(2)
-    
-# slowly scroll down to the bottom of the page 
+
+# slowly scroll down to the bottom of the page
 def slow_scroll_to_bottom(driver):
-    
+
     temp_height=0
-    
+
     while True:
- 
+
         driver.execute_script("window.scrollBy(0,800)")
 
         time.sleep(4)
@@ -55,22 +55,23 @@ def slow_scroll_to_bottom(driver):
         check_height = driver.execute_script("return document.documentElement.scrollTop || window.pageYOffset || document.body.scrollTop;")
 
         if check_height==temp_height:
-            
+
             break
-        
+
         temp_height=check_height
 
 def extract_additional_details_reviews(driver, data, pre_order):
     REVIEWS_PER_PAGE = 5
 
-    details = driver.find_element_by_class_name('app-details__header')
+    # wd.find_element(By.CSS_SELECTOR, 'h1>span')
+    details = driver.find_element(By.CLASS_NAME, 'app-details__header')
     driver.execute_script("arguments[0].scrollIntoView();",details)
 
     time.sleep(2)
 
     #store information in dictionary
-    row_left = driver.find_elements_by_class_name("app-details-row__left")
-    row_right = driver.find_elements_by_class_name("app-details-row__right")
+    row_left = driver.find_element(By.CLASS_NAME, "app-details-row__left")
+    row_right = driver.find_element(By.CLASS_NAME, "app-details-row__right")
 
     for index in range(len(row_left)):
 
@@ -83,7 +84,7 @@ def extract_additional_details_reviews(driver, data, pre_order):
 
                 parent = row_right[index]
 
-                link = parent.find_element_by_css_selector("a.app-details-row__link.link.link--clickable")
+                link = parent.find_element(By.CSS_SELECTOR, "a.app-details-row__link.link.link--clickable")
 
                 link.click()
 
@@ -97,9 +98,9 @@ def extract_additional_details_reviews(driver, data, pre_order):
                 data[left_name] = driver.current_url
 
                 # close the new tab and switch to the previous tab
-                driver.close()            
+                driver.close()
                 driver.switch_to.window(windows[app_webpage])
-        
+
                 time.sleep(2)
 
             except NoSuchElementException:
@@ -115,27 +116,27 @@ def extract_additional_details_reviews(driver, data, pre_order):
         data['Review_Count'] = 0
     else:
         # extract star ratings
-        star_ratings = driver.find_element_by_class_name('app-ratings-histogram').get_attribute('innerText')
+        star_ratings = driver.find_element(By.CLASS_NAME, 'app-ratings-histogram').get_attribute('innerText')
         data['Reviews_Stats'] = modify(star_ratings)
 
-        try: 
-            review_pages = driver.find_elements_by_css_selector("div.app-review-pager__number")
+        try:
+            review_pages = driver.find_element(By.CSS_SELECTOR, "div.app-review-pager__number")
             total_page_number = int(review_pages[-1].get_attribute('innerText'))
             review_pages[-1].click()
             time.sleep(2)
-            data['Review_Count'] = len(driver.find_elements_by_class_name('app-review')) + (REVIEWS_PER_PAGE * (total_page_number - 1))
+            data['Review_Count'] = len(driver.find_element(By.CLASS_NAME, 'app-review')) + (REVIEWS_PER_PAGE * (total_page_number - 1))
 
-            if data['Review_Count'] % 5 == 0 and len(driver.find_elements_by_class_name('app-review')) != 5:
+            if data['Review_Count'] % 5 == 0 and len(driver.find_element(By.CLASS_NAME, 'app-review')) != 5:
                 print("ERROR: something went wrong")
 
         except IndexError:  # only one page of reviews
-            data['Review_Count'] = len(driver.find_elements_by_class_name('app-review'))
+            data['Review_Count'] = len(driver.find_element(By.CLASS_NAME, 'app-review'))
 
 
 def test_extraction_python_org(driver, output_dir, url_list):
     MAX_STAR_VAL = 24
 
-    # access urls on the current webpage 
+    # access urls on the current webpage
     for url in url_list:
         driver.get(url)
 
@@ -144,39 +145,43 @@ def test_extraction_python_org(driver, output_dir, url_list):
 
         driver.execute_script("window.scrollBy(0,200)")
 
-        # define a dictionary to store an app's information           
+        # define a dictionary to store an app's information
         data = {}
         data["Oculus_url"] = url
 
-        #extract the title   
-        data['App_Title'] = driver.find_element_by_class_name("app-description__title").get_attribute("innerText")
+        #extract the title
+        data['App_Title'] = driver.find_element(By.CLASS_NAME, "app-description__title").get_attribute("innerText")
 
-        banner = driver.find_element_by_css_selector("div.app__banner").text
+        # print (url +  data['App_Title'])
+        # exit()
+
+        banner = driver.find_element(By.CLASS_NAME, "div.app__banner").get_attribute("innerHTML") #originally, "text"
+        print ("Banner is "+banner)
         if len(banner) > 0 and re.search("Pre-Order", banner):
             pre_order = True
             data['Rating_Count'] = 0
             data['Average_Rating'] = 0
-        else: 
+        else:
             pre_order = False
-            review_count = driver.find_element_by_css_selector("div.app-description__review-count").text
+            review_count = driver.find_element(By.CSS_SELECTOR, "div.app-description__review-count").text
             review_count = re.split(r'\s', review_count)[0]
             data['Rating_Count'] = int(re.sub(r',', '', review_count))
 
-            rating_section = driver.find_element_by_css_selector("a.app-description__star-section")
-            average_rating = rating_section.find_elements_by_css_selector("i.bxStars.bxStars--white")
+            rating_section = driver.find_element(By.CSS_SELECTOR, "a.app-description__star-section")
+            average_rating = rating_section.find_element(By.CSS_SELECTOR, "i.bxStars.bxStars--white")
             try:
-                fraction = rating_section.find_element_by_css_selector("div.bxStars.bxStars--white.bxStars--overlay").get_attribute("style")
+                fraction = rating_section.find_element(By.CSS_SELECTOR, "div.bxStars.bxStars--white.bxStars--overlay").get_attribute("style")
                 data['Average_Rating'] = len(average_rating) + (int(re.search("[\d]+",fraction).group(0)) / MAX_STAR_VAL )
             except:
                 data['Average_Rating'] = len(average_rating)
 
         #extract the description
-        text = driver.find_element_by_class_name('store-item-detail-page-description__content').get_attribute("innerText")
+        text = driver.find_element(By.CLASS_NAME,'store-item-detail-page-description__content').get_attribute("innerText")
         text = modify(text)
         data['App_Description'] = text
-        
+
         #extract from the purchase section
-        text = driver.find_element_by_class_name('app-purchase').get_attribute("innerText")
+        text = driver.find_element(By.CLASS_NAME, 'app-purchase').get_attribute("innerText")
         if text.find('$') == -1:
             data['Price'] = 0
 
@@ -205,13 +210,21 @@ def get_urls(driver):
 
     # scroll to the bottom of the page to obtain all elements
     driver.get('https://www.oculus.com/experiences/quest/section/1888816384764129/')
-    slow_scroll_to_bottom(driver)    
+    slow_scroll_to_bottom(driver)
 
     # a list of items on the webpage
-    items = driver.find_elements_by_css_selector('a.store-section-item-tile')
-    for item in items:
+    for item in driver.find_elements(By.CSS_SELECTOR,'a.store-section-item-tile'):
         url = item.get_attribute("href")
         url_list.append(url)
+    # print (url_list)
+    # get_attribute("href")
+    # print("I am printing items")
+    # print (items)
+    # exit()
+    # for item in items:
+    #     url = item.get_attribute("href")
+    #     url_list.append(url)
+    # print (url_list)
 
     return url_list
 
@@ -235,12 +248,13 @@ def main(path, output_dir, url_file, links_only):
     if not url_file or links_only:
         url_list = get_urls(driver)
         save_json("oculus_links", url_list)
+        print("json object saved with urls")
     else:
         url_list = json.load(open(url_file, "r"))
 
     if not links_only:
         time.sleep(2)
-        # extract data from the website 
+        # extract data from the website
         test_extraction_python_org(driver, output_dir, url_list)
 
     driver.quit()
@@ -255,3 +269,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     main(args.path, args.output_dir, args.url_file, args.links_only)
+
+# https://stackoverflow.com/questions/72854116/selenium-attributeerror-webdriver-object-has-no-attribute-find-element-by-cs
+# wd.find_element(By.CSS_SELECTOR, 'h1>span')
